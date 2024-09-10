@@ -83,13 +83,15 @@ pub struct Config {
     // so that inlining can eliminate references to `Backtrace::default`
     // if symbolication is not desired.
     make_backtrace: fn() -> Backtrace,
+    log_level: log::Level,
 }
 
 impl Config {
     /// Initializes the builder with the default set of features.
-    pub fn new() -> Self {
+    pub fn new(log_level: log::Level) -> Self {
         Self {
             make_backtrace: Backtrace::default,
+            log_level,
         }
     }
 
@@ -127,8 +129,10 @@ impl Config {
 
             match info.location() {
                 Some(location) => {
-                    error!(
-                        target: "panic", "thread '{}' panicked at '{}': {}:{}{:?}",
+                    log!(
+                        target: "panic",
+                        self.log_level,
+                        "thread '{}' panicked at '{}': {}:{}{:?}",
                         thread,
                         msg,
                         location.file(),
@@ -136,8 +140,9 @@ impl Config {
                         Shim(backtrace)
                     );
                 }
-                None => error!(
+                None => log!(
                     target: "panic",
+                    self.log_level,
                     "thread '{}' panicked at '{}'{:?}",
                     thread,
                     msg,
@@ -150,7 +155,7 @@ impl Config {
 
 impl Default for Config {
     fn default() -> Self {
-        Self::new()
+        Self::new(log::Level::Error)
     }
 }
 
@@ -161,5 +166,5 @@ impl Default for Config {
 ///
 /// See [`Config`] for more information.
 pub fn init() {
-    Config::new().install_panic_hook()
+    Config::default().install_panic_hook()
 }
